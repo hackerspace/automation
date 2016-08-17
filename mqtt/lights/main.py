@@ -75,6 +75,7 @@ def loop():
     """ main loop section """
 
     try:
+        # this won't work if mqtt.connect() was not called before!
         MQTT.check_msg()
     except OSError as err:
         print("error during check_msg")
