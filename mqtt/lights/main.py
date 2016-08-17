@@ -32,6 +32,8 @@ def on_message(topic, msg):
 
     print("got msg " + str(msg) + " on: " + str(topic))
 
+    # we expect char representing number '0', '1', so we can just 'shift' it's
+    # real value
     val = int(msg[0]) - 48
 
     print("value: " + str(val))
@@ -40,6 +42,8 @@ def on_message(topic, msg):
         print("msg value bad")
         return
 
+    # for now only receiveing topics are for lights itself, so this hack
+    # to get light pin from topic works
     pin_number = int(chr(topic[-1]))
 
     if pin_number in LIGHTS_PINS.keys():
