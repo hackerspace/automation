@@ -1,12 +1,14 @@
 """ mockup module to use when running on unix system """
 
+import time as p_time
 
 class Pin:
 
     IN = 'in'
     OUT = 'out'
+    PULL_UP = 'pull_up'
 
-    def __init__(self, n, way):
+    def __init__(self, n, way, pullup=False):
         self.n = n
         self.way = way
 
@@ -25,11 +27,11 @@ class Pin:
             if self.way == self.IN:
                 if self._get_counter == 2000000:
                     self._get_counter = 0
-                    print("sending random 0 from pin " + str(self.n))
-                    return 0
+                    print("sending random 1 from pin " + str(self.n))
+                    return 1
                 else:
                     self._get_counter += 1
-                    return 1
+                    return 0
             else:
                 return self._val
 
@@ -50,3 +52,4 @@ class WLAN:
 
     def isconnected(self):
         return True
+
