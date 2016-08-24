@@ -1,14 +1,14 @@
 """ config for  esp """
 
 dev_name = 'esplana'
-broker_host = '172.17.3.6'
+broker_host = '127.0.0.1'
 
 room="workroom"
 
 """ topics will be subscribed with pins name !"""
 lights = (
-        (4,"table_a"), 
-        (5,"table_b")
+        (4,"table_left"), 
+        (5,"table_right")
         )
 
 button = (13, 'table')
