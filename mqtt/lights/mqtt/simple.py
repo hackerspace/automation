@@ -38,6 +38,7 @@ class MQTTClient:
 
     def connect(self, clean_session=True):
         self.sock = socket.socket()
+        self.sock.settimeout(0.5)
         self.sock.connect(self.addr)
         msg = bytearray(b"\x10\0\0\x04MQTT\x04\x02\0\0")
         msg[1] = 10 + 2 + len(self.client_id)
@@ -99,7 +100,9 @@ class MQTTClient:
         #print(hex(len(pkt)), hexlify(pkt, ":"))
         self.sock.write(pkt)
         self._send_str(topic)
-        self.sock.write(qos.to_bytes(1))
+        self.sock.write(
+                qos.to_bytes(1, "little")
+                )
         resp = self.sock.read(5)
         #print(resp)
         assert resp[0] == 0x90

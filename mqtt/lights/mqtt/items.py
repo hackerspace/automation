@@ -1,7 +1,7 @@
 import time
 import gc
 try:
-    from machime import Pin
+    from machine import Pin
 except ImportError:
     from mock import Pin
 
@@ -9,35 +9,41 @@ except ImportError:
 class MQTTCom:
 
 
-    def __init__(self, mqtt):
+    def __init__(self, mqtt, error_pin=2):
 
         self.mqtt = mqtt
         self.subs = dict()
         self.is_connected = False
         mqtt.cb = self._on_cb
+        if error_pin is not None:
+            self.error_pin = Pin(error_pin, Pin.OUT)
+        else:
+            self.error_pin = None
 
-    def check(self):
+    def check_msg(self):
         try:
             self.mqtt.check_msg()
         except OSError:
-            self.is_connected = False
-            self.init(infinite=False)
+            self.try_init()
 
     def publish(self, topic, msg):
         if self.is_connected:
             self.mqtt.publish(topic, msg)
 
-    def init(self, infinite=True):
+    def try_init(self):
 
-        while True:
-            try:
-                self.mqtt.connect()
-                self._subscribe_all()
-                self.is_connected = True
-                return
-            except OSError:
-                if not infinite:
-                    return
+        try:
+            self.mqtt.connect()
+            self._subscribe_all()
+            print("connecting successfull")
+            self.is_connected = True
+            if self.error_pin is not None:
+                self.error_pin.value(1)
+        except OSError:
+            print("connecting failed")
+            self.is_connected = False
+            if self.error_pin is not None:
+                self.error_pin.value(0)
 
     def _subscribe_all(self):
         for key in self.subs.keys():

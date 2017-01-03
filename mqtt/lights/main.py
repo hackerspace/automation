@@ -27,6 +27,7 @@ WLAN = WLAN(STA_IF)
 while not WLAN.isconnected():
     time.sleep(0.1)
 
+print("Connecting to " + cfg.broker_host)
 MQTT = MQTTClient('dev-' + cfg.dev_name, cfg.broker_host)
 
 COM = MQTTCom(MQTT)
@@ -82,15 +83,15 @@ def loop():
     global BUTTON
     global GC
 
-    COM.check()
+    COM.check_msg()
 
     for item in ITEMS:
         item.tick()
 
     GC.tick()
 
+COM.try_init()
 
-COM.init()
 
 while True:
     loop()
