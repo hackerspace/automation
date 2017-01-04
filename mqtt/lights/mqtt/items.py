@@ -108,8 +108,8 @@ class ComButton:
 
         if self._laststate == 0 and pin_value == 1:
 
-            if time.ticks_diff(self._lasttime, now) > self.debounce:
-
+            if time.ticks_diff(now, self._lasttime) > self.debounce:
+                
                 self.com.publish(self.topic, b'1')
 
                 self.cb()
