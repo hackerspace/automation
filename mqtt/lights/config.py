@@ -12,6 +12,6 @@ lights = (
         )
 
 button = (13, 'table')
-button_debounce = 0.2
+button_debounce = 200 # ms
 
 led_pin = 15
