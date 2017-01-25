@@ -51,7 +51,7 @@ for pin, name in cfg.lights:
             )
 
 ITEMS = list()
-INFO = ComInfo(COM, ITEMS)
+INFO = ComInfo(COM, cfg, ITEMS)
 
 ITEMS.append(INFO)
 ITEMS.append(BUTTON)
@@ -83,7 +83,7 @@ def loop():
     global BUTTON
     global GC
 
-    COM.check_msg()
+    COM.check()
 
     for item in ITEMS:
         item.tick()

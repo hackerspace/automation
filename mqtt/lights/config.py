@@ -15,3 +15,5 @@ button = (13, 'table')
 button_debounce = 200 # ms
 
 led_pin = 15
+
+description = "ESP8266 in main workroom replaced svetlana, buggy az hellz"

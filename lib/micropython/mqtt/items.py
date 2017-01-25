@@ -1,14 +1,12 @@
 import time
+import machine
+import esp
 import gc
-try:
-    from machime import Pin
-except ImportError:
-    from mock import Pin
+import os
+from machine import Pin
 
 
 class MQTTCom:
-
-
     def __init__(self, mqtt):
 
         self.mqtt = mqtt
@@ -21,23 +19,21 @@ class MQTTCom:
             self.mqtt.check_msg()
         except OSError:
             self.is_connected = False
-            self.init(infinite=False)
+            self.try_init()
 
     def publish(self, topic, msg):
         if self.is_connected:
             self.mqtt.publish(topic, msg)
 
-    def init(self, infinite=True):
+    def try_init(self):
 
-        while True:
-            try:
-                self.mqtt.connect()
-                self._subscribe_all()
-                self.is_connected = True
-                return
-            except OSError:
-                if not infinite:
-                    return
+        try:
+            self.mqtt.connect()
+            self._subscribe_all()
+            self.is_connected = True
+            return
+        except OSError:
+            return
 
     def _subscribe_all(self):
         for key in self.subs.keys():
@@ -61,26 +57,54 @@ class MQTTCom:
 
 
 class ComInfo:
-    def __init__(self, com, items):
+    def __init__(self, com, cfg, items):
         self.com = com
         self.sub_topic = '/info/send'
-        self.pub_topic = '/info'
+        self.ctl_pub_topic = '/info/ctl'
+        self.hp_pub_topic = '/info/hp'
+        self.desc_pub_topic = '/info/desc'
+        self.cfg = cfg
         self.items = items
 
         com.subscribe(self.sub_topic, self._on_msg)
 
     def _on_msg(self, msg):
 
-        if msg[0] != 1 + 48:
+        if msg.startswith(u"ctl"):
+            msgs = list()
+            topic = self.ctl_pub_topic
+
+            for item in self.items:
+
+                if item == self:
+                    continue
+
+                msgs.extend([",".join(info) for info in item.gather_info()])
+
+        elif msg.startswith(u"hp"):
+            msgs = self.gather_health_info()
+            topic = self.hp_pub_topic
+
+        elif msg.startswith(u"desc"):
+            msgs = [self.cfg.description]
+            topic = self.desc_pub_topic
+
+        else:
+            print("bad topic for info")
             return
 
-        for item in self.items:
+        for msg in msgs:
+            self.com.publish(topic, self.cfg.dev_name + ":" + msg)
 
-            if item == self:
-                continue
-
-            for info in item.gather_info():
-                self.com.publish(self.pub_topic, ",".join(info))
+    def gather_health_info(self):
+        return [
+            "flash id, " + str(esp.flash_id()),
+            "cpu freq, " + str(machine.freq()),
+            "unique id, " + str(machine.unique_id()),
+            "mem alloc, " + str(gc.mem_alloc()),
+            "mem gree, " + str(gc.mem_free()),
+            "statvfs, " + ",".join([str(x) for x in os.statvfs("")]),
+        ]
 
     def tick(self):
         pass
@@ -102,7 +126,9 @@ class ComButton:
 
         if self._laststate == 0 and pin_value == 1:
 
-            if time.ticks_diff(self._lasttime, now) > self.debounce:
+            print("button times", now, self._lasttime)
+
+            if time.ticks_diff(now, self._lasttime) > self.debounce:
 
                 self.com.publish(self.topic, b'1')
 
@@ -113,7 +139,7 @@ class ComButton:
         self._laststate = pin_value
 
     def gather_info(self):
-        return (('pub', 'button', self.topic, 'sends char 1 when pressed'),)
+        return (('pub', 'button', self.topic, 'sends char 1 when pressed'), )
 
 
 class ComLight:
@@ -121,20 +147,25 @@ class ComLight:
         self.pin = Pin(pin, Pin.OUT)
         self.pin.low()
         self.com = com
-        self.topic = '/' + room + '/lights/' + name
-        com.subscribe(self.topic, self._on_msg)
+        self.ctl_topic = '/' + room + '/lights/ctl/' + name
+        self.event_topic = '/' + room + '/lights/events/' + name
+        com.subscribe(self.ctl_topic, self._on_msg)
 
     def _on_msg(self, msg):
         val = msg[0] - 48
 
         if val == 1:
             self.pin.high()
+            self.com.publish(self.event_topic, b'1')
         elif val == 0:
             self.pin.low()
+            self.com.publish(self.event_topic, b'0')
 
     def gather_info(self):
-        return (('sub', 'light', self.topic, 'Send char of 0 or 1 to turn off or on'),)
+        return (('sub', 'light', self.ctl_topic,
+                 'Send char of 0 or 1 to turn off or on'),
+                ('pub', 'light', self.event_topic,
+                 'Sned char of 0 or 1 when light tunerd off or on'))
 
     def tick(self):
         pass
-
